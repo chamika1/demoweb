@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Full-Stack Developer Portfolio</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body {
+            background-color: #0a0a0f;
+            color: #e2e8f0;
+        }
+        
+        /* Loading animation styles */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0a0a0f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+            perspective: 1000px;
+        }
+        
+        .loader {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: rotate 4s infinite linear;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotateX(0) rotateY(0); }
+            100% { transform: rotateX(360deg) rotateY(360deg); }
+        }
+        
+        .cube-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(59, 130, 246, 0.2);
+            border: 2px solid #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+            backface-visibility: visible;
+        }
+        
+        .front { transform: translateZ(50px); }
+        .back { transform: translateZ(-50px) rotateY(180deg); }
+        .right { transform: translateX(50px) rotateY(90deg); }
+        .left { transform: translateX(-50px) rotateY(-90deg); }
+        .top { transform: translateY(-50px) rotateX(90deg); }
+        .bottom { transform: translateY(50px) rotateX(-90deg); }
+        
+        .loader-text {
+            position: absolute;
+            bottom: -40px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 16px;
+            letter-spacing: 3px;
+            color: #3b82f6;
+            animation: pulse 1.5s ease-in-out infinite;
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        .loader {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+        
+        .loader-circle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 4px solid transparent;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+        }
+        
+        .loader-circle:nth-child(2) {
+            width: 70%;
+            height: 70%;
+            top: 15%;
+            left: 15%;
+            border-top-color: #60a5fa;
+            animation-duration: 0.9s;
+            animation-direction: reverse;
+        }
+        
+        .loader-circle:nth-child(3) {
+            width: 40%;
+            height: 40%;
+            top: 30%;
+            left: 30%;
+            border-top-color: #93c5fd;
+            animation-duration: 0.6s;
+        }
+        
+        .loader-text {
+            position: absolute;
+            bottom: -30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 14px;
+            letter-spacing: 2px;
+            color: #3b82f6;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .glass {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 10px;
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Scrollbar styling for dark theme */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1e1e24;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2563eb;
+        }
+        
+        /* Smooth transitions */
+        a, button {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loader">
+            <div class="cube-face front"></div>
+            <div class="cube-face back"></div>
+            <div class="cube-face right"></div>
+            <div class="cube-face left"></div>
+            <div class="cube-face top"></div>
+            <div class="cube-face bottom"></div>
+            <div class="loader-text">LOADING</div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+    
+    <div class="content min-h-screen">
+        <!-- Navigation -->
+        <nav class="glass fixed w-full p-4 z-10">
+            <div class="container mx-auto flex justify-between items-center">
+                <a href="#" class="text-2xl font-bold">DevPortfolio</a>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#about" class="hover:text-blue-400 transition">About</a>
+                    <a href="#projects" class="hover:text-blue-400 transition">Projects</a>
+                    <a href="#skills" class="hover:text-blue-400 transition">Skills</a>
+                    <a href="#contact" class="hover:text-blue-400 transition">Contact</a>
+                </div>
+                <button class="md:hidden" id="mobile-menu-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            </div>
+            <div id="mobile-menu" class="hidden md:hidden container mx-auto mt-4 p-4 glass rounded-lg">
+                <div class="flex flex-col space-y-4">
+                    <a href="#about" class="hover:text-blue-400 transition">About</a>
+                    <a href="#projects" class="hover:text-blue-400 transition">Projects</a>
+                    <a href="#skills" class="hover:text-blue-400 transition">Skills</a>
+                    <a href="#contact" class="hover:text-blue-400 transition">Contact</a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <section class="h-screen flex items-center">
+            <div class="container mx-auto px-4">
+                <div class="glass p-8 max-w-2xl">
+                    <h1 class="text-5xl font-bold mb-4">Hi, I'm <span class="text-blue-400">Alex</span></h1>
+                    <p class="text-xl mb-8">Full-Stack Developer & Problem Solver</p>
+                    <div class="flex space-x-4">
+                        <a href="#projects" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition">View Projects</a>
+                        <a href="#contact" class="border border-white hover:bg-white hover:text-gray-900 px-6 py-3 rounded-lg transition">Contact Me</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="py-20">
+            <div class="container mx-auto px-4">
+                <h2 class="text-4xl font-bold mb-16 text-center">About Me</h2>
+                <div class="glass p-8 max-w-4xl mx-auto">
+                    <div class="flex flex-col md:flex-row items-center">
+                        <div class="md:w-1/3 mb-8 md:mb-0">
+                            <div class="w-48 h-48 rounded-full overflow-hidden mx-auto bg-blue-900">
+                                <!-- Placeholder for profile image -->
+                                <div class="w-full h-full flex items-center justify-center text-6xl">
+                                    A
+                                </div>
+                            </div>
+                        </div>
+                        <div class="md:w-2/3 md:pl-8">
+                            <p class="text-lg mb-4">
+                                I'm a passionate full-stack developer with 5+ years of experience building web and mobile applications. 
+                                I specialize in creating robust, scalable solutions that solve real-world problems.
+                            </p>
+                            <p class="text-lg mb-4">
+                                My expertise spans the entire development stack - from designing intuitive user interfaces to 
+                                implementing efficient backend systems and databases. I'm constantly learning new technologies 
+                                and methodologies to stay at the forefront of the industry.
+                            </p>
+                            <p class="text-lg">
+                                When I'm not coding, you can find me contributing to open-source projects, mentoring junior developers, 
+                                or exploring the latest tech trends.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Projects Section -->
+        <section id="projects" class="py-20 bg-gray-800 bg-opacity-50">
+            <div class="container mx-auto px-4">
+                <h2 class="text-4xl font-bold mb-16 text-center">My Projects</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="projects-grid">
+                    <!-- Project cards will be dynamically loaded -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Skills Section -->
+        <section id="skills" class="py-20">
+            <div class="container mx-auto px-4">
+                <h2 class="text-4xl font-bold mb-16 text-center">Skills & Technologies</h2>
+                <div class="glass p-8 max-w-4xl mx-auto">
+                    <div class="mb-12">
+                        <h3 class="text-2xl font-semibold mb-6 text-center">Frontend</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                            <div class="p-4 hover:transform hover:scale-105 transition">
+                                <div class="text-4xl mb-2">⚛️</div>
+                                <h3 class="text-xl font-semibold">React</h3>
+                            </div>
+                            <div class="p-4 hover:transform hover:scale-105 transition">
+                                <div class="text-4xl mb-2">🅰️</div>
+                                <h3 class="text-xl font-semibold">Angular</h3>
+                            </div>
+                            <div class="p-4 hover:transform hover:scale-105 transition">
+                                <div class="text-4xl mb-2">🎨</div>
+                                <h3 class="text-xl font-semibold">CSS/SASS</h3>
+                            </div>
+                            <div class="p-4 hover:transform hover:scale-105 transition">
+                                <div class="text-4xl mb-2">📱</div>
+                                <h3 class="text-xl font-semibold">Responsive Design</h3>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-12">
+                        <h3 class="text-2xl font-semibold mb-6 text-center">Backend</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                            <div class="p-4 hover:transform hover:scale-105 transition">
+                                <div class="text-4xl mb-2">🟢</div>
+                                <h3 class="text-xl font-semibold">Node.js</h3>
+                            </div>
+                            <div class="p-4 hover:transform hover:scale-105 transition">
+                                <div class="text-4xl mb-2">🐍</div>
+                                <h3 class="text-xl font-semibold">Python</h3>
+                            </div>
+                            <div class="p-4 hover:transform hover:scale-105 transition">
+                                <div class="text-4xl mb-2">🔄</div>
+                                <h3 class="text-xl font-semibold">RESTful APIs</h3>
+                            </div>
+                            <div class="p-4 hover:transform hover:scale-105 transition">
+                                <div class="text-4xl mb-2">📊</div>
+                                <h3 class="text-xl font-semibold">GraphQL</h3>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-2xl font-semibold mb-6 text-center">Database & DevOps</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                            <div class="p-4 hover:transform hover:scale-105 transition">
+                                <div class="text-4xl mb-2">🗄️</div>
+                                <h3 class="text-xl font-semibold">MongoDB</h3>
+                            </div>
+                            <div class="p-4 hover:transform hover:scale-105 transition">
+                                <div class="text-4xl mb-2">📁</div>
+                                <h3 class="text-xl font-semibold">SQL</h3>
+                            </div>
+                            <div class="p-4 hover:transform hover:scale-105 transition">
+                                <div class="text-4xl mb-2">🐳</div>
+                                <h3 class="text-xl font-semibold">Docker</h3>
+                            </div>
+                            <div class="p-4 hover:transform hover:scale-105 transition">
+                                <div class="text-4xl mb-2">☁️</div>
+                                <h3 class="text-xl font-semibold">AWS/Azure</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="py-20">
+            <div class="container mx-auto px-4">
+                <h2 class="text-4xl font-bold mb-16 text-center">Get In Touch</h2>
+                <div class="glass p-8 max-w-2xl mx-auto border border-blue-900" style="backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); background: rgba(15, 23, 42, 0.5);">
+                    <form class="space-y-6" id="contact-form">
+                        <div>
+                            <label for="name" class="block text-sm font-medium mb-2">Name</label>
+                            <input type="text" id="name" class="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium mb-2">Email</label>
+                            <input type="email" id="email" class="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="message" class="block text-sm font-medium mb-2">Message</label>
+                            <textarea id="message" rows="4" class="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="py-8 text-center">
+            <div class="container mx-auto px-4">
+                <div class="flex justify-center space-x-6 mb-4">
+                    <a href="#" class="hover:text-blue-400 transition">
+                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path>
+                        </svg>
+                    </a>
+                    <a href="#" class="hover:text-blue-400 transition">
+                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"></path>
+                        </svg>
+                    </a>
+                    <a href="#" class="hover:text-blue-400 transition">
+                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c5.51 0 10-4.48 10-10S17.51 2 12 2zm-1.41 7.08c.84-.58 1.87-.93 2.98-.93 1.11 0 2.14.35 2.98.93a4.98 4.98 0 011.11 1.24c.26.39.44.82.51 1.27.06.45.03.91-.09 1.33a4.97 4.97 0 01-2.64 3.27c-.3.11-.62.2-.95.25-.33.05-.67.07-1 .07-.33 0-.67-.02-1-.07-.33-.05-.65-.14-.95-.25a4.97 4.97 0 01-2.64-3.27c-.12-.42-.15-.88-.09-1.33.07-.45.25-.88.51-1.27.26-.39.59-.75.99-1.05.39-.3.83-.53 1.29-.69zM12 9c-1.65 0-3 1.35-3 3s1.35 3 3 3 3-1.35 3-3-1.35-3-3-3zm5.5-1.5c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5.67 1.5 1.5 1.5 1.5-.67 1.5-1.5z" clip-rule="evenodd"></path>
+                        </svg>
+                    </a>
+                    <a href="#" class="hover:text-blue-400 transition">
+                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"></path>
+                        </svg>
+                    </a>
+                </div>
+                <p>&copy; 2023 Full-Stack Developer Portfolio. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Integrated JavaScript -->
+    <script>
+        // Three.js animation setup
+        let scene, camera, renderer;
+        let particles = [];
+        let mouseX = 0, mouseY = 0;
+
+        function init() {
+            // Create scene with darker background
+            scene = new THREE.Scene();
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 30;
+            
+            // Create renderer with better alpha and antialias
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true, 
+                alpha: true,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Add lights
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+            
+            // Create particles with more vibrant colors
+            createParticles();
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            // Track mouse movement for interactive background
+            document.addEventListener('mousemove', onMouseMove);
+            
+            // Start animation loop
+            animate();
+            
+            // Load projects
+            loadProjects();
+        }
+
+        function createParticles() {
+            // Create particle geometry
+            const particleGeometry = new THREE.BufferGeometry();
+            const particleCount = 2000; // Increased particle count
+            
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const sizes = new Float32Array(particleCount);
+            
+            const color = new THREE.Color();
+            
+            for (let i = 0; i < particleCount; i++) {
+                // Position
+                positions[i * 3] = (Math.random() - 0.5) * 100;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+                
+                // Color - darker theme with blues and purples
+                const colorIndex = Math.random();
+                if (colorIndex < 0.33) {
+                    color.setHSL(0.6, 0.9, 0.5); // Blue
+                } else if (colorIndex < 0.66) {
+                    color.setHSL(0.7, 0.9, 0.5); // Purple
+                } else {
+                    color.setHSL(0.8, 0.9, 0.4); // Dark Pink
+                }
+                
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+                
+                // Size - varied sizes for depth
+                sizes[i] = Math.random() * 0.8 + 0.1;
+                
+                // Store particle data for animation
+                particles.push({
+                    velocity: new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.02,
+                        (Math.random() - 0.5) * 0.02,
+                        (Math.random() - 0.5) * 0.02
+                    ),
+                    index: i
+                });
+            }
+            
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            particleGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+            
+            // Create particle material with improved visuals
+            const particleMaterial = new THREE.PointsMaterial({
+                size: 0.7,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                sizeAttenuation: true,
+                blending: THREE.AdditiveBlending
+            });
+            
+            // Create particle system
+            const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+            scene.add(particleSystem);
+        }
+
+        function onMouseMove(event) {
+            // Calculate mouse position in normalized device coordinates
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Animate particles
+            const positions = scene.children[2].geometry.attributes.position.array;
+            
+            for (let i = 0; i < particles.length; i++) {
+                const particle = particles[i];
+                const idx = particle.index * 3;
+                
+                // Update position
+                positions[idx] += particle.velocity.x;
+                positions[idx + 1] += particle.velocity.y;
+                positions[idx + 2] += particle.velocity.z;
+                
+                // Boundary check
+                if (Math.abs(positions[idx]) > 50) particle.velocity.x *= -1;
+                if (Math.abs(positions[idx + 1]) > 50) particle.velocity.y *= -1;
+                if (Math.abs(positions[idx + 2]) > 50) particle.velocity.z *= -1;
+            }
+            
+            scene.children[2].geometry.attributes.position.needsUpdate = true;
+            
+            // Rotate scene based on mouse position for interactive effect
+            scene.rotation.y += 0.001 + (mouseX * 0.001);
+            scene.rotation.x += 0.0005 + (mouseY * 0.001);
+            
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function loadProjects() {
+            const projectsContainer = document.getElementById('projects-grid');
+            
+            // Sample project data
+            const projects = [
+                {
+                    name: "E-Commerce Platform",
+                    description: "A full-stack e-commerce solution with product management, shopping cart, payment processing, and order tracking.",
+                    technologies: "React, Node.js, Express, MongoDB, Stripe",
+                    image: "https://image.pollinations.ai/prompt/ecommerce%20website%20dashboard%20modern%20ui?width=1080&height=1420&nologo=true",
+                    demoUrl: "#",
+                    codeUrl: "#"
+                },
+                {
+                    name: "Task Management App",
+                    description: "A collaborative task management application with real-time updates, user authentication, and team workspaces.",
+                    technologies: "Angular, Firebase, TypeScript, RxJS",
+                    image: "https://image.pollinations.ai/prompt/task%20management%20app%20interface%20productivity?width=1080&height=1420&nologo=true",
+                    demoUrl: "#",
+                    codeUrl: "#"
+                },
+                {
+                    name: "Social Media Dashboard",
+                    description: "A comprehensive analytics dashboard for social media managers with data visualization and reporting features.",
+                    technologies: "Vue.js, D3.js, Express, PostgreSQL",
+                    image: "https://image.pollinations.ai/prompt/social%20media%20analytics%20dashboard%20data%20visualization?width=1080&height=1420&nologo=true",
+                    demoUrl: "#",
+                    codeUrl: "#"
+                },
+                {
+                    name: "Real Estate Marketplace",
+                    description: "A platform for property listings with advanced search, virtual tours, and appointment scheduling.",
+                    technologies: "React, Django, Python, AWS S3",
+                    image: "https://image.pollinations.ai/prompt/real%20estate%20property%20listing%20modern%20architecture?width=1080&height=1420&nologo=true",
+                    demoUrl: "#",
+                    codeUrl: "#"
+                },
+                {
+                    name: "Fitness Tracking App",
+                    description: "A mobile-first application for tracking workouts, nutrition, and health metrics with personalized recommendations.",
+                    technologies: "React Native, GraphQL, Node.js, MongoDB",
+                    image: "https://image.pollinations.ai/prompt/fitness%20tracking%20app%20health%20metrics%20dashboard?width=1080&height=1420&nologo=true",
+                    demoUrl: "#",
+                    codeUrl: "#"
+                },
+                {
+                    name: "Content Management System",
+                    description: "A custom CMS with role-based access control, content scheduling, and SEO optimization tools.",
+                    technologies: "Next.js, Tailwind CSS, Prisma, PostgreSQL",
+                    image: "https://image.pollinations.ai/prompt/content%20management%20system%20dashboard%20modern%20interface?width=1080&height=1420&nologo=true",
+                    demoUrl: "#",
+                    codeUrl: "#"
+                }
+            ];
+            
+            // Create project cards
+            projects.forEach(project => {
+                const projectCard = document.createElement('div');
+                projectCard.className = 'glass p-6 rounded-lg transition transform hover:scale-105 flex flex-col h-full';
+                
+                projectCard.innerHTML = `
+                    <div class="mb-4 rounded-lg overflow-hidden">
+                        <img src="${project.image}" alt="${project.name}" class="w-full h-40 object-cover">
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">${project.name}</h3>
+                    <p class="text-gray-300 mb-4 flex-grow">${project.description}</p>
+                    <div class="text-sm text-gray-400 mb-4">
+                        <span class="font-medium text-gray-300">Technologies:</span> ${project.technologies}
+                    </div>
+                    <div class="flex justify-between mt-auto pt-3 border-t border-gray-700">
+                        <a href="${project.demoUrl}" class="text-sm bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded transition">Live Demo</a>
+                        <a href="${project.codeUrl}" class="text-sm border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-gray-900 px-4 py-2 rounded transition">View Code</a>
+                    </div>
+                `;
+                
+                projectsContainer.appendChild(projectCard);
+            });
+        }
+
+        function onMouseMove(event) {
+            // Calculate mouse position in normalized device coordinates
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        // Enhance the contact form with validation
+        function setupContactForm() {
+            const form = document.getElementById('contact-form');
+            if (!form) return;
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const nameInput = document.getElementById('name');
+                const emailInput = document.getElementById('email');
+                const messageInput = document.getElementById('message');
+                
+                // Simple validation
+                let isValid = true;
+                
+                if (!nameInput.value.trim()) {
+                    markInvalid(nameInput, 'Name is required');
+                    isValid = false;
+                } else {
+                    markValid(nameInput);
+                }
+                
+                if (!emailInput.value.trim()) {
+                    markInvalid(emailInput, 'Email is required');
+                    isValid = false;
+                } else if (!isValidEmail(emailInput.value)) {
+                    markInvalid(emailInput, 'Please enter a valid email');
+                    isValid = false;
+                } else {
+                    markValid(emailInput);
+                }
+                
+                if (!messageInput.value.trim()) {
+                    markInvalid(messageInput, 'Message is required');
+                    isValid = false;
+                } else {
+                    markValid(messageInput);
+                }
+                
+                if (isValid) {
+                    // Here you would normally send the form data to a server
+                    // For now, just show a success message
+                    showFormSuccess();
+                }
+            });
+        }
+
+        function markInvalid(input, message) {
+            input.classList.add('border-red-500');
+            
+            // Find or create error message
+            let errorElement = input.parentElement.querySelector('.error-message');
+            if (!errorElement) {
+                errorElement = document.createElement('p');
+                errorElement.className = 'error-message text-red-500 text-xs mt-1';
+                input.parentElement.appendChild(errorElement);
+            }
+            errorElement.textContent = message;
+        }
+
+        function markValid(input) {
+            input.classList.remove('border-red-500');
+            
+            // Remove error message if it exists
+            const errorElement = input.parentElement.querySelector('.error-message');
+            if (errorElement) {
+                errorElement.remove();
+            }
+        }
+
+        function isValidEmail(email) {
+            const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+            return re.test(String(email).toLowerCase());
+        }
+
+        function showFormSuccess() {
+            const form = document.getElementById('contact-form');
+            form.innerHTML = `
+                <div class="text-center py-8">
+                    <svg class="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <h3 class="text-xl font-bold mb-2">Message Sent!</h3>
+                    <p class="text-gray-300">Thank you for reaching out. I'll get back to you soon.</p>
+                </div>
+            `;
+        }
+
+        // Mobile menu toggle
+        function setupMobileMenu() {
+            const menuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (!menuButton || !mobileMenu) return;
+            
+            menuButton.addEventListener('click', () => {
+                if (mobileMenu.classList.contains('hidden')) {
+                    mobileMenu.classList.remove('hidden');
+                } else {
+                    mobileMenu.classList.add('hidden');
+                }
+            });
+
+            // Close mobile menu when clicking on a link
+            const mobileLinks = mobileMenu.querySelectorAll('a');
+            mobileLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                });
+            });
+        }
+
+        // Smooth scrolling for navigation links
+        function setupSmoothScrolling() {
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const targetId = this.getAttribute('href');
+                    if (targetId === '#') return; // Skip if it's just "#"
+                    
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.offsetTop - 80, // Offset for fixed header
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+        }
+
+        // Add scroll animation for elements
+        function setupScrollAnimations() {
+            const animatedElements = document.querySelectorAll('.glass');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('opacity-100');
+                        entry.target.classList.remove('opacity-0', 'translate-y-10');
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            animatedElements.forEach(el => {
+                el.classList.add('transition', 'duration-700', 'opacity-0', 'translate-y-10');
+                observer.observe(el);
+            });
+        }
+
+        // Initialize everything when the page loads
+        window.addEventListener('load', () => {
+            // Show loading screen
+            const loadingScreen = document.getElementById('loading-screen');
+            
+            // Initialize Three.js and other components
+            init();
+            setupContactForm();
+            setupMobileMenu();
+            setupSmoothScrolling();
+            setupScrollAnimations();
+            
+            // Hide loading screen after everything is loaded
+            setTimeout(() => {
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 500);
+            }, 1500); // Adjust timing as needed
+        });
+    </script>
+</body>
+</html>
